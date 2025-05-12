@@ -69,7 +69,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_SWAG_SPEC IMPLEMENTATION.
+CLASS zcl_swag_spec IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -415,14 +415,6 @@ CLASS ZCL_SWAG_SPEC IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD strip_quotes.
-    FIND REGEX `['|``](.*)['|``]` IN iv_string SUBMATCHES rv_result.
-    IF rv_result IS INITIAL.
-      rv_result = iv_string.
-    ENDIF.
-  ENDMETHOD.
-
-
   METHOD tagdescriptions.
 
     DATA: lv_string TYPE string,
@@ -467,4 +459,12 @@ CLASS ZCL_SWAG_SPEC IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
+
+  METHOD strip_quotes.
+    FIND REGEX `['|``](.*)['|``]` IN iv_string SUBMATCHES rv_result.
+    IF rv_result IS INITIAL.
+      rv_result = iv_string.
+    ENDIF.
+  ENDMETHOD.
+
 ENDCLASS.
