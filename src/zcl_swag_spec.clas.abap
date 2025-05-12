@@ -363,7 +363,9 @@ CLASS zcl_swag_spec IMPLEMENTATION.
 * todo, basic/simple types?
     lv_string = |"{ is_parameter-type }": \{{ lv_type }\}|.
     APPEND lv_string TO mt_definitions.
-
+*    lv_string = |"{ is_meta-meta-handler }_Request": \{ "allOf": [\{ "$ref": "#/definitions/{ is_parameter-type }" \}]\}|.
+    lv_string = |"{ is_meta-meta-handler }_Request": \{ "$ref": "#/definitions/{ is_parameter-type }" \}|.
+    APPEND lv_string TO mt_definitions.
   ENDMETHOD.
 
 
@@ -400,7 +402,8 @@ CLASS zcl_swag_spec IMPLEMENTATION.
       APPEND lv_string TO lt_string.
       APPEND '}' TO lt_string.
 
-      lv_string = |"{ <ls_parameter>-type }":\{"type": "object","properties": \{"DATA": \{{ lv_type }\}\}\}|.
+*      lv_string = |"{ <ls_parameter>-type }":\{"type": "object","properties": \{"DATA": \{{ lv_type }\}\}\}|.
+      lv_string = |"{ <ls_parameter>-type }": \{{ lv_type }\}|.
       APPEND lv_string TO mt_definitions.
     ENDLOOP.
 
