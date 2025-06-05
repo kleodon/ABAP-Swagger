@@ -1,47 +1,47 @@
-CLASS zcl_swag_map_type DEFINITION
-  PUBLIC
-  CREATE PUBLIC .
+class ZCL_SWAG_MAP_TYPE definition
+  public
+  create public .
 
-  PUBLIC SECTION.
+public section.
 
-    CLASS-METHODS get_typedescr
-      IMPORTING
-        !is_parm            TYPE seosubcodf
-      RETURNING
-        VALUE(ro_typedescr) TYPE REF TO cl_abap_typedescr .
-    METHODS map
-      RETURNING
-        VALUE(rv_type) TYPE string .
-    METHODS constructor
-      IMPORTING
-        !is_param  TYPE seosubcodf
-        !iv_schema TYPE abap_bool DEFAULT abap_true .
-  PROTECTED SECTION.
+  class-methods GET_TYPEDESCR
+    importing
+      !IS_PARM type SEOSUBCODF
+    returning
+      value(RO_TYPEDESCR) type ref to CL_ABAP_TYPEDESCR .
+  methods MAP
+    returning
+      value(RV_TYPE) type STRING .
+  methods CONSTRUCTOR
+    importing
+      !IS_PARAM type SEOSUBCODF
+      !IV_SCHEMA type ABAP_BOOL default ABAP_TRUE .
+protected section.
 
-    DATA mv_schema TYPE abap_bool .
-    DATA ms_param TYPE seosubcodf .
+  data MV_SCHEMA type ABAP_BOOL .
+  data MS_PARAM type SEOSUBCODF .
 
-    METHODS map_element
-      IMPORTING
-        !io_typedescr  TYPE REF TO cl_abap_typedescr
-      RETURNING
-        VALUE(rv_type) TYPE string .
-    METHODS map_internal
-      IMPORTING
-        !io_typedescr  TYPE REF TO cl_abap_typedescr
-      RETURNING
-        VALUE(rv_type) TYPE string .
-    METHODS map_structure
-      IMPORTING
-        !io_typedescr  TYPE REF TO cl_abap_typedescr
-      RETURNING
-        VALUE(rv_type) TYPE string .
-    METHODS map_table
-      IMPORTING
-        !io_typedescr  TYPE REF TO cl_abap_typedescr
-      RETURNING
-        VALUE(rv_type) TYPE string .
-  PRIVATE SECTION.
+  methods MAP_ELEMENT
+    importing
+      !IO_TYPEDESCR type ref to CL_ABAP_TYPEDESCR
+    returning
+      value(RV_TYPE) type STRING .
+  methods MAP_INTERNAL
+    importing
+      !IO_TYPEDESCR type ref to CL_ABAP_TYPEDESCR
+    returning
+      value(RV_TYPE) type STRING .
+  methods MAP_STRUCTURE
+    importing
+      !IO_TYPEDESCR type ref to CL_ABAP_TYPEDESCR
+    returning
+      value(RV_TYPE) type STRING .
+  methods MAP_TABLE
+    importing
+      !IO_TYPEDESCR type ref to CL_ABAP_TYPEDESCR
+    returning
+      value(RV_TYPE) type STRING .
+private section.
 ENDCLASS.
 
 

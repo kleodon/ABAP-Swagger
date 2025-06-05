@@ -5,6 +5,32 @@ CLASS zcl_swag DEFINITION
   PUBLIC SECTION.
 
     TYPES:
+      BEGIN OF ty_deserialize_settings,
+        pretty_name      TYPE zcl_json=>pretty_name_mode,
+        assoc_arrays     TYPE zcl_json=>bool,
+        assoc_arrays_opt TYPE zcl_json=>bool,
+        name_mappings    TYPE zcl_json=>name_mappings,
+        conversion_exits TYPE zcl_json=>bool,
+      END OF ty_deserialize_settings.
+    TYPES:
+      BEGIN OF ty_serialize_settings,
+        compress         TYPE zcl_json=>bool,
+        name             TYPE string,
+        pretty_name      TYPE zcl_json=>pretty_name_mode,
+        assoc_arrays     TYPE zcl_json=>bool,
+        assoc_arrays_opt TYPE zcl_json=>bool,
+        ts_as_iso8601    TYPE zcl_json=>bool,
+        expand_includes  TYPE zcl_json=>bool,
+        numc_as_string   TYPE zcl_json=>bool,
+        name_mappings    TYPE zcl_json=>name_mappings,
+        conversion_exits TYPE zcl_json=>bool,
+      END OF ty_serialize_settings.
+    TYPES:
+      BEGIN OF ty_json_settings,
+        deserialize_settings TYPE ty_deserialize_settings,
+        serialize_settings   TYPE ty_serialize_settings,
+      END OF ty_json_settings.
+    TYPES:
       ty_parameters_tt TYPE STANDARD TABLE OF seosubcodf WITH DEFAULT KEY .
     TYPES:
       BEGIN OF ty_url,
@@ -23,6 +49,7 @@ CLASS zcl_swag DEFINITION
         handler           TYPE string,
         tags              TYPE STANDARD TABLE OF string WITH DEFAULT KEY,
         response_settings TYPE ty_response,
+        json_settings     TYPE ty_json_settings,
       END OF ty_meta .
     TYPES:
       BEGIN OF ty_meta_internal,
@@ -134,28 +161,34 @@ CLASS zcl_swag DEFINITION
     METHODS validate_parameters
       IMPORTING
         !it_parameters TYPE ty_parameters_tt .
-  PRIVATE SECTION.
-    METHODS handle_response
-      IMPORTING
-        is_meta          TYPE ty_meta_internal
-        iv_abap_response TYPE any
-      CHANGING
-        cv_data          TYPE xstring
-      RAISING
-        cx_parameter_invalid_range
-        cx_parameter_invalid_type
-        cx_sy_codepage_converter_init
-        cx_sy_conversion_codepage .
-    METHODS handle_remove_data_object
-      IMPORTING
-        is_meta           TYPE ty_meta_internal
-      CHANGING
-        cv_data_as_string TYPE string
-      RAISING
-        cx_parameter_invalid_range
-        cx_parameter_invalid_type
-        cx_sy_codepage_converter_init
-        cx_sy_conversion_codepage.
+private section.
+
+  methods HANDLE_RESPONSE
+    importing
+      !IS_META type TY_META_INTERNAL
+      !IV_ABAP_RESPONSE type ANY
+    changing
+      !CV_DATA type STRING
+    raising
+      CX_PARAMETER_INVALID_RANGE
+      CX_PARAMETER_INVALID_TYPE
+      CX_SY_CODEPAGE_CONVERTER_INIT
+      CX_SY_CONVERSION_CODEPAGE .
+  methods HANDLE_REMOVE_DATA_OBJECT
+    importing
+      !IS_META type TY_META_INTERNAL
+    changing
+      !CV_DATA_AS_STRING type STRING
+    raising
+      CX_PARAMETER_INVALID_RANGE
+      CX_PARAMETER_INVALID_TYPE
+      CX_SY_CODEPAGE_CONVERTER_INIT
+      CX_SY_CONVERSION_CODEPAGE .
+  methods INITIALIZE_JSON_SETTINGS
+    importing
+      !IS_JSON_SETTINGS type TY_JSON_SETTINGS
+    returning
+      value(RESULT) type TY_JSON_SETTINGS .
 ENDCLASS.
 
 
@@ -265,20 +298,33 @@ CLASS ZCL_SWAG IMPLEMENTATION.
       ELSEIF <ls_parameter>-type = 'XSTRING'.
         <lg_comp> = mi_server->request->get_data( ).
       ELSE.
-        lv_cdata = mi_server->request->get_cdata( ).
-        lv_cdata = '{"DATA":' && lv_cdata && '}'.
+*        lv_cdata = mi_server->request->get_cdata( ).
+*        lv_cdata = '{"DATA":' && lv_cdata && '}'.
 
-        lo_writer = cl_sxml_string_writer=>create( type = if_sxml=>co_xt_json ).
+*        lo_writer = cl_sxml_string_writer=>create( type = if_sxml=>co_xt_json ).
+*
+*        CALL TRANSFORMATION zdemo_json_xml_to_upper
+*          SOURCE XML lv_cdata
+*          RESULT XML lo_writer.
+*
+*        lv_json = lo_writer->get_output( ).
+*
+*        CALL TRANSFORMATION id
+*          SOURCE XML lv_json
+*          RESULT data = <lg_comp>.
 
-        CALL TRANSFORMATION zdemo_json_xml_to_upper
-          SOURCE XML lv_cdata
-          RESULT XML lo_writer.
-
-        lv_json = lo_writer->get_output( ).
-
-        CALL TRANSFORMATION id
-          SOURCE XML lv_json
-          RESULT data = <lg_comp>.
+        zcl_json=>deserialize(
+          EXPORTING
+            json             = mi_server->request->get_cdata( )
+*            jsonx            =
+            pretty_name      = is_meta-meta-json_settings-deserialize_settings-pretty_name
+            assoc_arrays     = is_meta-meta-json_settings-deserialize_settings-assoc_arrays
+            assoc_arrays_opt = is_meta-meta-json_settings-deserialize_settings-assoc_arrays_opt
+            name_mappings    = is_meta-meta-json_settings-deserialize_settings-name_mappings
+            conversion_exits = is_meta-meta-json_settings-deserialize_settings-conversion_exits
+          CHANGING
+            data             = <lg_comp>
+        ).
       ENDIF.
 
 * multiple body input parameters not allowed
@@ -475,26 +521,86 @@ CLASS ZCL_SWAG IMPLEMENTATION.
 
   METHOD handle_response.
 
-    DATA:
-      lo_xstring_to_string TYPE REF TO cl_abap_conv_in_ce,
-      lo_string_to_xstring TYPE REF TO cl_abap_conv_out_ce,
-      lv_data_as_string    TYPE string.
+*    DATA:
+*      lo_xstring_to_string TYPE REF TO cl_abap_conv_in_ce,
+*      lo_string_to_xstring TYPE REF TO cl_abap_conv_out_ce,
+*      lv_data_as_string    TYPE string.
 
-    lo_xstring_to_string = cl_abap_conv_in_ce=>create( input = cv_data ).
-    lo_xstring_to_string->read( IMPORTING data = lv_data_as_string ).
+*    lo_xstring_to_string = cl_abap_conv_in_ce=>create( input = cv_data ).
+*    lo_xstring_to_string->read( IMPORTING data = lv_data_as_string ).
 
     handle_remove_data_object(
           EXPORTING
             is_meta = is_meta
           CHANGING
-            cv_data_as_string = lv_data_as_string ).
+*            cv_data_as_string = lv_data_as_string ).
+            cv_data_as_string = cv_data ).
 
-    lo_string_to_xstring = cl_abap_conv_out_ce=>create( ).
-    lo_string_to_xstring->convert(
-      EXPORTING
-          data = lv_data_as_string
-      IMPORTING
-          buffer = cv_data ).
+*    lo_string_to_xstring = cl_abap_conv_out_ce=>create( ).
+*    lo_string_to_xstring->convert(
+*      EXPORTING
+*          data = lv_data_as_string
+*      IMPORTING
+*          buffer = cv_data ).
+
+
+  ENDMETHOD.
+
+
+  METHOD initialize_json_settings.
+    MOVE-CORRESPONDING is_json_settings TO result.
+
+
+    "deserialize
+    IF is_json_settings-deserialize_settings-pretty_name IS INITIAL.
+      result-deserialize_settings-pretty_name = zcl_json=>pretty_mode-none.
+    ENDIF.
+
+    IF is_json_settings-deserialize_settings-assoc_arrays IS INITIAL.
+      result-deserialize_settings-assoc_arrays = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-deserialize_settings-assoc_arrays_opt IS INITIAL.
+      result-deserialize_settings-assoc_arrays_opt = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-deserialize_settings-conversion_exits IS INITIAL.
+      result-deserialize_settings-conversion_exits = zcl_json=>c_bool-false.
+    ENDIF.
+
+
+    "serialize
+    IF is_json_settings-serialize_settings-compress IS INITIAL.
+      result-serialize_settings-compress =  zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-pretty_name IS INITIAL.
+      result-serialize_settings-pretty_name = zcl_json=>pretty_mode-none.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-assoc_arrays IS INITIAL.
+      result-serialize_settings-assoc_arrays = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-assoc_arrays_opt IS INITIAL.
+      result-serialize_settings-assoc_arrays_opt = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-ts_as_iso8601 IS INITIAL.
+      result-serialize_settings-ts_as_iso8601 = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-expand_includes IS INITIAL.
+      result-serialize_settings-expand_includes = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-numc_as_string IS INITIAL.
+      result-serialize_settings-numc_as_string = zcl_json=>c_bool-false.
+    ENDIF.
+
+    IF is_json_settings-serialize_settings-conversion_exits IS INITIAL.
+      result-serialize_settings-conversion_exits = zcl_json=>c_bool-false.
+    ENDIF.
 
 
   ENDMETHOD.
@@ -502,8 +608,9 @@ CLASS ZCL_SWAG IMPLEMENTATION.
 
   METHOD json_reply.
 
-    DATA: lv_data   TYPE xstring,
-          lo_writer TYPE REF TO cl_sxml_string_writer.
+    DATA: lv_data    TYPE string,
+          lv_xstring TYPE xstring,
+          lo_writer  TYPE REF TO cl_sxml_string_writer.
 
     FIELD-SYMBOLS: <ls_meta>      LIKE LINE OF is_meta-parameters,
                    <ls_parameter> LIKE LINE OF it_parameters,
@@ -517,12 +624,30 @@ CLASS ZCL_SWAG IMPLEMENTATION.
         WITH KEY name = <ls_meta>-sconame.
       ASSERT sy-subrc = 0.
 
-      lo_writer = cl_sxml_string_writer=>create( if_sxml=>co_xt_json ).
+*      lo_writer = cl_sxml_string_writer=>create( if_sxml=>co_xt_json ).
       ASSIGN <ls_parameter>-value->* TO <lg_struc>.
-      CALL TRANSFORMATION id
-        SOURCE data = <lg_struc>
-        RESULT XML lo_writer.
-      lv_data = lo_writer->get_output( ).
+*      CALL TRANSFORMATION id
+*        SOURCE data = <lg_struc>
+*        RESULT XML lo_writer.
+*      lv_data = lo_writer->get_output( ).
+
+      zcl_json=>serialize(
+        EXPORTING
+          data             = <lg_struc>
+          compress         = is_meta-meta-json_settings-serialize_settings-compress
+          name             = is_meta-meta-json_settings-serialize_settings-name
+          pretty_name      = is_meta-meta-json_settings-serialize_settings-pretty_name
+*          type_descr       =
+          assoc_arrays     = is_meta-meta-json_settings-serialize_settings-assoc_arrays
+          ts_as_iso8601    = is_meta-meta-json_settings-serialize_settings-ts_as_iso8601
+          expand_includes  = is_meta-meta-json_settings-serialize_settings-expand_includes
+          assoc_arrays_opt = is_meta-meta-json_settings-serialize_settings-assoc_arrays_opt
+          numc_as_string   = is_meta-meta-json_settings-serialize_settings-numc_as_string
+          name_mappings    = is_meta-meta-json_settings-serialize_settings-name_mappings
+          conversion_exits = is_meta-meta-json_settings-serialize_settings-conversion_exits
+        RECEIVING
+          r_json           = lv_data
+      ).
 
     ENDIF.
 
@@ -534,16 +659,28 @@ CLASS ZCL_SWAG IMPLEMENTATION.
             CHANGING
               cv_data = lv_data ).
     ENDIF.
-    mi_server->response->set_data( lv_data ).
+
+    CALL FUNCTION 'SCMS_STRING_TO_XSTRING'
+      EXPORTING
+        text     = lv_data
+        encoding = '4110' "'UTF-8'
+      IMPORTING
+        buffer   = lv_xstring.
+
+*    mi_server->response->set_cdata( lv_data ).
+    mi_server->response->set_data( lv_xstring ).
 
   ENDMETHOD.
 
 
   METHOD register.
 
-    DATA: ls_meta LIKE LINE OF mt_meta,
-          lt_meta TYPE ty_meta_tt,
-          lo_obj  TYPE REF TO cl_abap_objectdescr.
+    DATA: ls_meta      LIKE LINE OF mt_meta,
+          lt_meta      TYPE ty_meta_tt,
+          lo_obj       TYPE REF TO cl_abap_objectdescr,
+          ls_metod     TYPE abap_methdescr,
+          lv_classname TYPE seoclsname,
+          lv_method    TYPE seocmpname.
 
 
     lt_meta = ii_handler->meta( ).
@@ -555,22 +692,29 @@ CLASS ZCL_SWAG IMPLEMENTATION.
       READ TABLE lo_obj->methods
         WITH KEY name = ls_meta-meta-handler
         visibility = cl_abap_objectdescr=>public
-        TRANSPORTING NO FIELDS.
+        INTO ls_metod.
 * method must exist and be public
       ASSERT sy-subrc = 0.
 
       ls_meta-classname = lo_obj->absolute_name+7.
 
+      IF ls_metod-is_interface EQ abap_true.
+        SPLIT ls_metod-name AT '~' INTO lv_classname lv_method.
+      ELSE.
+        lv_classname = ls_meta-classname.
+        lv_method = ls_meta-meta-handler.
+      ENDIF.
+
       SELECT * FROM seosubcodf
         INTO TABLE ls_meta-parameters
-        WHERE clsname = ls_meta-classname
-        AND cmpname = ls_meta-meta-handler
-        AND sconame NOT LIKE 'ZCX_%'
+        WHERE clsname = lv_classname
+          AND cmpname = lv_method
+          AND sconame NOT LIKE 'ZCX_%'
         ORDER BY PRIMARY KEY.                             "#EC CI_SUBRC
       ASSERT sy-subrc = 0. " the method does not have any parameters
 
       validate_parameters( ls_meta-parameters ).
-
+      ls_meta-meta-json_settings = initialize_json_settings( ls_meta-meta-json_settings ).
       APPEND ls_meta TO mt_meta.
 
       CLEAR ls_meta.

@@ -69,7 +69,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_swag_spec IMPLEMENTATION.
+CLASS ZCL_SWAG_SPEC IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -201,6 +201,9 @@ CLASS zcl_swag_spec IMPLEMENTATION.
         lv_add = response( <ls_meta> ).
         _add lv_add.
 
+        _add '          "400":{'.
+        _add '            "description":"bad request"'.
+        _add '          },'.
         _add '          "401":{'.
         _add '            "description":"not authorized"'.
         _add '          },'.
@@ -259,7 +262,7 @@ CLASS zcl_swag_spec IMPLEMENTATION.
     DATA: lt_string TYPE TABLE OF string,
           lv_string LIKE LINE OF lt_string,
           lv_type   TYPE string,
-          lo_map    TYPE REF TO zcl_swag_map_type.
+          lo_map    TYPE REF TO zcl_swag_map_type_json.
 
     FIELD-SYMBOLS: <ls_parameter> LIKE LINE OF is_meta-parameters.
 
@@ -293,7 +296,9 @@ CLASS zcl_swag_spec IMPLEMENTATION.
 
       CREATE OBJECT lo_map
         EXPORTING
-          is_param = <ls_parameter>.
+          is_param         = <ls_parameter>
+          iv_pretty_name   = is_meta-meta-json_settings-deserialize_settings-pretty_name
+          it_name_mappings = is_meta-meta-json_settings-deserialize_settings-name_mappings.
       lv_type = lo_map->map( ).
       CONCATENATE lv_type ',' INTO lv_string.
       APPEND lv_string TO lt_string.
@@ -349,15 +354,21 @@ CLASS zcl_swag_spec IMPLEMENTATION.
 
   METHOD request.
 
-    DATA: lo_map    TYPE REF TO zcl_swag_map_type,
+    DATA: lo_map    TYPE REF TO zcl_swag_map_type_json,
           lv_string TYPE string,
           lv_type   TYPE string.
 
 
+*    CREATE OBJECT lo_map
+*      EXPORTING
+*        is_param  = is_parameter
+*        iv_schema = abap_false.
     CREATE OBJECT lo_map
       EXPORTING
-        is_param  = is_parameter
-        iv_schema = abap_false.
+        is_param         = is_parameter
+        iv_schema        = abap_false
+        iv_pretty_name   = is_meta-meta-json_settings-deserialize_settings-pretty_name
+        it_name_mappings = is_meta-meta-json_settings-deserialize_settings-name_mappings.
     lv_type = lo_map->map( ).
 
 * todo, basic/simple types?
@@ -374,7 +385,7 @@ CLASS zcl_swag_spec IMPLEMENTATION.
     DATA: lt_string TYPE TABLE OF string,
           lv_type   TYPE string,
           lv_string TYPE string,
-          lo_map    TYPE REF TO zcl_swag_map_type.
+          lo_map    TYPE REF TO zcl_swag_map_type_json.
 
     FIELD-SYMBOLS: <ls_parameter> LIKE LINE OF is_meta-parameters.
 
@@ -391,10 +402,16 @@ CLASS zcl_swag_spec IMPLEMENTATION.
 
     LOOP AT is_meta-parameters ASSIGNING <ls_parameter>
         WHERE pardecltyp = zcl_swag=>c_parm_kind-returning.
+*      CREATE OBJECT lo_map
+*        EXPORTING
+*          is_param  = <ls_parameter>
+*          iv_schema = abap_false.
       CREATE OBJECT lo_map
         EXPORTING
-          is_param  = <ls_parameter>
-          iv_schema = abap_false.
+          is_param         = <ls_parameter>
+          iv_schema        = abap_false
+          iv_pretty_name   = is_meta-meta-json_settings-serialize_settings-pretty_name
+          it_name_mappings = is_meta-meta-json_settings-serialize_settings-name_mappings.
       lv_type = lo_map->map( ).
 
       APPEND '"schema": {' TO lt_string.
@@ -412,6 +429,14 @@ CLASS zcl_swag_spec IMPLEMENTATION.
     CONCATENATE LINES OF lt_string INTO rv_response
       SEPARATED BY cl_abap_char_utilities=>newline.
 
+  ENDMETHOD.
+
+
+  METHOD strip_quotes.
+    FIND REGEX `['|``](.*)['|``]` IN iv_string SUBMATCHES rv_result.
+    IF rv_result IS INITIAL.
+      rv_result = iv_string.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -459,12 +484,4 @@ CLASS zcl_swag_spec IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
-
-  METHOD strip_quotes.
-    FIND REGEX `['|``](.*)['|``]` IN iv_string SUBMATCHES rv_result.
-    IF rv_result IS INITIAL.
-      rv_result = iv_string.
-    ENDIF.
-  ENDMETHOD.
-
 ENDCLASS.
